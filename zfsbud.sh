@@ -44,7 +44,11 @@ help() {
     echo " -r, --remove-old                             remove all but the most recent, the last common (if sending), 8 daily, 5 weekly, 13 monthly and 6 yearly source snapshots"
     echo " -d, --dry-run                                show output without making actual changes"
     echo " -p, --snapshot-prefix <prefix>               use a snapshot prefix other than 'zfsbud_'"
+<<<<<<< HEAD
     echo " -C, --custom-config </path/to/file>            custom config file"
+=======
+    echo " -C, --custom-config </path/to/file>          custom config file"
+>>>>>>> custom_config
     echo " -v, --verbose                                increase verbosity"
     echo " -l, --log                                    log to user's home directory"
     echo " -L, --log-path </path/to/file>               provide path to log file (implies --log)"

@@ -85,6 +85,7 @@ for arg in "$@"; do
     ;;
   -p | --snapshot-prefix)
     if [ "$2" ] && [[ $2 != -* ]]; then
+      custom_snapshot_prefix=1
       snapshot_prefix=$2
       shift
       shift
@@ -158,7 +159,7 @@ for arg in "$@"; do
   esac
 done
 
-[ -v custom_config ] && snapshot_prefix=$(config_get default_snapshot_prefix)
+[ -v custom_config ] && [ ! -v custom_snapshot_prefix ] && snapshot_prefix=$(config_get default_snapshot_prefix)
 
 dataset_exists() {
   if [ -v remote_shell ]; then

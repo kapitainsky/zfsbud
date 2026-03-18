@@ -24,10 +24,9 @@
 
             installPhase = ''
               install -Dm755 zfsbud.sh $out/libexec/zfsbud
-              install -Dm644 default.zfsbud.conf $out/share/zfsbud/default.zfsbud.conf
+              install -Dm644 default.zfsbud.conf $out/libexec/default.zfsbud.conf
 
               makeWrapper $out/libexec/zfsbud $out/bin/zfsbud \
-                --set ZFSBUD_DEFAULT_CONFIG $out/share/zfsbud/default.zfsbud.conf \
                 --prefix PATH : ${lib.makeBinPath [
                   pkgs.bash
                   pkgs.coreutils
@@ -55,13 +54,13 @@
         let
           package = self.packages.${system}.zfsbud;
         in {
-        default = {
-          type = "app";
-          program = "${package}/bin/zfsbud";
-          meta = package.meta;
-        };
-        zfsbud = self.apps.${system}.default;
-      });
+          default = {
+            type = "app";
+            program = "${package}/bin/zfsbud";
+            meta = package.meta;
+          };
+          zfsbud = self.apps.${system}.default;
+        });
 
       devShells = forAllSystems (system:
         let

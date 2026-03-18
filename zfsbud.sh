@@ -9,17 +9,54 @@ msg() { echo "$*" 1>&2; }
 warn() { msg "WARNING: $*"; }
 die() { msg "ERROR: $*"; kill -s TERM $TOP_PID; }
 
+script_dir() {
+  dirname "$(readlink -f "$0")"
+}
+
+user_config_file() {
+  if [ -n "${ZFSBUD_CONFIG:-}" ]; then
+    printf '%s\n' "$ZFSBUD_CONFIG"
+    return 0
+  fi
+
+  if [ -n "${XDG_CONFIG_HOME:-}" ]; then
+    printf '%s\n' "$XDG_CONFIG_HOME/zfsbud/zfsbud.conf"
+    return 0
+  fi
+
+  printf '%s\n' "$HOME/.config/zfsbud/zfsbud.conf"
+}
+
+local_config_file() {
+  printf '%s\n' "$(script_dir)/zfsbud.conf"
+}
+
+default_config_file() {
+  local working_dir
+  working_dir="$(script_dir)"
+
+  if [ -f "$working_dir/default.zfsbud.conf" ]; then
+    printf '%s\n' "$working_dir/default.zfsbud.conf"
+    return 0
+  fi
+
+  return 1
+}
+
 config_read_file() {
   (grep -E "^${2}=" -m 1 "${1}" 2>/dev/null || echo "VAR=__UNDEFINED__") | head -n 1 | cut -d '=' -f 2-;
 }
 
 config_get() {
-  working_dir="$(dirname "$(readlink -f "$0")")"
-  val="$(config_read_file $working_dir/zfsbud.conf "${1}")";
+  local val
+  val="$(config_read_file "$(user_config_file)" "${1}")";
   if [ "${val}" = "__UNDEFINED__" ]; then
-    val="$(config_read_file $working_dir/default.zfsbud.conf "${1}")";
+    val="$(config_read_file "$(local_config_file)" "${1}")";
+  fi
+  if [ "${val}" = "__UNDEFINED__" ]; then
+    val="$(config_read_file "$(default_config_file || true)" "${1}")";
     if [ "${val}" = "__UNDEFINED__" ]; then
-      die "Default configuration file 'default.zfsbud.conf' is missing or corrupt."
+      die "No valid zfsbud configuration found. Set ZFSBUD_CONFIG, place zfsbud.conf in your XDG config directory, or ensure the default configuration is installed."
     fi
   fi
   printf -- "%s" "${val}";
@@ -27,6 +64,13 @@ config_get() {
 
 help() {
     echo "Usage: $(basename "$0") [OPTION]... SOURCE/DATASET/PATH [SOURCE/DATASET/PATH2...]"
+    echo
+    echo "Configuration is read from, in order:"
+    echo "  1. ZFSBUD_CONFIG"
+    echo "  2. \$XDG_CONFIG_HOME/zfsbud/zfsbud.conf (if XDG_CONFIG_HOME is set)"
+    echo "  3. \$HOME/.config/zfsbud/zfsbud.conf"
+    echo "  4. zfsbud.conf next to the script"
+    echo "  5. default.zfsbud.conf next to the script"
     echo
     echo " -s, --send <destination_parent_dataset/path> send source dataset incrementally to specified destination"
     echo " -i, --initial                                initially clone source dataset to destination (requires --send)"

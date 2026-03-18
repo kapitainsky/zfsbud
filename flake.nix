@@ -5,19 +5,75 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { self, nixpkgs }: {
-    packages.x86_64-linux.zfsbud = nixpkgs.legacyPackages.x86_64-linux.stdenv.mkDerivation {
-      pname = "zfsbud";
-      version = "master";
-      src = self;
-      buildInputs = [ nixpkgs.legacyPackages.x86_64-linux.bash ];
-      dontBuild = true;
-      installPhase = ''
-        install -D zfsbud.sh $out/bin/zfsbud
-        install -D default.zfsbud.conf $out/bin/default.zfsbud.conf
-      '';
-    };
+  outputs = { self, nixpkgs }:
+    let
+      lib = nixpkgs.lib;
+      supportedSystems = builtins.filter (system: lib.hasSuffix "-linux" system) lib.systems.flakeExposed;
+      forAllSystems = lib.genAttrs supportedSystems;
+      version = self.shortRev or self.dirtyShortRev or "dirty";
+    in {
+      packages = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          zfsbud = pkgs.stdenvNoCC.mkDerivation {
+            pname = "zfsbud";
+            inherit version;
+            src = self;
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            dontBuild = true;
 
-    packages.x86_64-linux.default = self.packages.x86_64-linux.zfsbud;
-  };
+            installPhase = ''
+              install -Dm755 zfsbud.sh $out/libexec/zfsbud
+              install -Dm644 default.zfsbud.conf $out/share/zfsbud/default.zfsbud.conf
+
+              makeWrapper $out/libexec/zfsbud $out/bin/zfsbud \
+                --set ZFSBUD_DEFAULT_CONFIG $out/share/zfsbud/default.zfsbud.conf \
+                --prefix PATH : ${lib.makeBinPath [
+                  pkgs.bash
+                  pkgs.coreutils
+                  pkgs.gnugrep
+                  pkgs.gnused
+                  pkgs.openssh
+                  pkgs.util-linux
+                ]}
+            '';
+
+            meta = with lib; {
+              description = "ZFS snapshotting, replication, and retention helper script";
+              homepage = "https://gbyte.dev/project/zfsbud";
+              license = licenses.mit;
+              mainProgram = "zfsbud";
+              platforms = platforms.linux;
+            };
+          };
+        in {
+          inherit zfsbud;
+          default = zfsbud;
+        });
+
+      apps = forAllSystems (system:
+        let
+          package = self.packages.${system}.zfsbud;
+        in {
+        default = {
+          type = "app";
+          program = "${package}/bin/zfsbud";
+          meta = package.meta;
+        };
+        zfsbud = self.apps.${system}.default;
+      });
+
+      devShells = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in {
+          default = pkgs.mkShell {
+            packages = [
+              pkgs.bashInteractive
+              pkgs.shellcheck
+              pkgs.shfmt
+            ];
+          };
+        });
+    };
 } 

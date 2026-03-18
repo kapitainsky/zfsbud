@@ -19,6 +19,14 @@ The following operations are possible:
 ## Usage
 Here are some usage examples.
 
+### Configuration
+Configuration is read from, in order:
+- `ZFSBUD_CONFIG`
+- `$XDG_CONFIG_HOME/zfsbud/zfsbud.conf` (if `XDG_CONFIG_HOME` is set)
+- `$HOME/.config/zfsbud/zfsbud.conf`
+- `zfsbud.conf` next to the script
+- `default.zfsbud.conf` next to the script
+
 ### Snapshotting of a local dataset
 `zfsbud.sh --create-snapshot some_label dataset/path1`
 - `--create-snapshot|-c [label]` creates a snapshot for each dataset with the following name: `dataset/path@zfsbud_YYYYMMDDHHMMSS_some_label`
